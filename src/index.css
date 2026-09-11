@@ -1,0 +1,154 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root, [data-theme="light"] {
+  --background: 247 249 253;
+  --on-background: 25 28 31;
+  --surface: 247 249 253;
+  --surface-bright: 247 249 253;
+  --surface-dim: 216 218 222;
+  --surface-container-lowest: 255 255 255;
+  --surface-container-low: 242 244 248;
+  --surface-container: 236 238 242;
+  --surface-container-high: 230 232 236;
+  --surface-container-highest: 224 227 230;
+  --surface-variant: 224 227 230;
+  --on-surface: 25 28 31;
+  --on-surface-variant: 92 64 58;
+  --secondary: 87 94 112;
+  --secondary-container: 217 223 245;
+  --on-secondary: 255 255 255;
+  --on-secondary-container: 92 98 116;
+  --outline: 145 111 104;
+  --outline-variant: 229 190 181;
+  --primary: 179 33 0;
+  --primary-vibrant: 255 75 38;
+  --primary-container: 220 50 13;
+  --on-primary: 255 255 255;
+  --on-primary-container: 255 251 255;
+  --primary-fixed: 255 218 211;
+  --on-primary-fixed: 62 5 0;
+  --error: 186 26 26;
+  --error-container: 255 218 214;
+  --on-error: 255 255 255;
+  --on-error-container: 147 0 10;
+  --tertiary: 0 105 71;
+  --tertiary-vibrant: 0 133 91;
+  --tertiary-container: 0 133 91;
+  --on-tertiary: 255 255 255;
+  --on-tertiary-container: 245 255 246;
+}
+
+:root.dark, html.dark, .dark, [data-theme="dark"] {
+  --background: 11 15 23;
+  --on-background: 240 244 252;
+  --surface: 11 15 23;
+  --surface-bright: 18 24 36;
+  --surface-dim: 14 18 27;
+  --surface-container-lowest: 18 24 36;
+  --surface-container-low: 23 31 46;
+  --surface-container: 29 38 56;
+  --surface-container-high: 38 49 71;
+  --surface-container-highest: 50 64 93;
+  --surface-variant: 38 49 71;
+  --on-surface: 240 244 252;
+  --on-surface-variant: 179 186 197;
+  --secondary: 148 163 184;
+  --secondary-container: 30 41 59;
+  --on-secondary: 248 250 252;
+  --on-secondary-container: 203 213 225;
+  --outline: 71 85 105;
+  --outline-variant: 51 65 85;
+  --primary: 255 84 54;
+  --primary-vibrant: 255 95 64;
+  --primary-container: 220 50 13;
+  --on-primary: 255 255 255;
+  --on-primary-container: 255 251 255;
+  --primary-fixed: 69 26 20;
+  --on-primary-fixed: 255 218 211;
+  --error: 255 107 107;
+  --error-container: 74 21 21;
+  --on-error: 255 255 255;
+  --on-error-container: 255 212 212;
+  --tertiary: 16 185 129;
+  --tertiary-vibrant: 52 211 153;
+  --tertiary-container: 6 78 59;
+  --on-tertiary: 255 255 255;
+  --on-tertiary-container: 167 243 208;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: rgb(var(--background));
+  color: rgb(var(--on-background));
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+*, ::before, ::after {
+  box-sizing: inherit;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(145, 111, 104, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(145, 111, 104, 0.45);
+}
+
+/* Material Symbols alignment helper */
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+
+/* Animated flow for topology mesh lines */
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+.animate-flow-dash {
+  animation: flowDash 1.5s linear infinite;
+}
+
+/* Pulse animation for live indicators */
+@keyframes livePulse {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+}
+
+.live-beacon {
+  animation: livePulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
