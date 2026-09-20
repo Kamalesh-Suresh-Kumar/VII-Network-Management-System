@@ -64,3 +64,8 @@ Exp 7/
 Exp 8/
 Exp 9/
 Exp 10/
+
+# Java / Maven
+target/
+**/target/
+.mvn/wrapper/maven-wrapper.jar
