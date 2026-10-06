@@ -3,7 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/layout/Header';
 import { LoadingState } from '../components/common/LoadingState';
 import { ErrorState } from '../components/common/ErrorState';
-import { getDashboardSummary } from '../services/api';
+import {
+  getDashboardSummary,
+  getTelemetry,
+  getDevices,
+  TelemetryRecord,
+} from '../services/api';
+import { RealTelemetryChart } from '../components/common/RealTelemetryChart';
 import { DashboardSummary } from '../types';
 
 const TIME_RANGE_CONFIG: Record<'1H' | '6H' | '24H' | '7D', {
@@ -85,6 +91,8 @@ const TIME_RANGE_CONFIG: Record<'1H' | '6H' | '24H' | '7D', {
 
 export const DashboardPage: React.FC = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [telemetry, setTelemetry] = useState<TelemetryRecord[]>([]);
+  const [devices, setDevices] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<'1H' | '6H' | '24H' | '7D'>('24H');
@@ -96,8 +104,15 @@ export const DashboardPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await getDashboardSummary();
+      const [data, telemetryData, deviceData] = await Promise.all([
+        getDashboardSummary(),
+        getTelemetry(),
+        getDevices(),
+      ]);
+
       setSummary(data);
+      setTelemetry(telemetryData);
+      setDevices(deviceData);
     } catch (err) {
       setError('Could not retrieve NOC telemetry stream.');
     } finally {
@@ -134,6 +149,65 @@ export const DashboardPage: React.FC = () => {
       </div>
     );
   }
+
+  const realDevices = devices.filter(d =>
+    ['R1', 'R2', 'R3'].includes(String(d.id).toUpperCase())
+  );
+
+  const deviceById = new Map(
+    realDevices.map(d => [String(d.id).toUpperCase(), d])
+  );
+
+  const activeAlarms = summary.activeAlarms || [];
+  const criticalCount = activeAlarms.filter(
+    a => String(a.severity).toUpperCase() === 'P0' ||
+         String(a.severity).toLowerCase() === 'critical'
+  ).length;
+
+  const warningCount = activeAlarms.filter(
+    a => String(a.severity).toUpperCase() === 'P1' ||
+         String(a.severity).toLowerCase() === 'warning'
+  ).length;
+
+const interfaceTelemetry = telemetry.filter(
+    t => t.metricName === 'interface_oper_status'
+  );
+
+  const totalTelemetrySamples = interfaceTelemetry.length;
+
+  const upTelemetrySamples = interfaceTelemetry.filter(
+    t => t.metricValue === 1
+  ).length;
+
+  const downTelemetrySamples = interfaceTelemetry.filter(
+    t => t.metricValue === 0
+  ).length;
+
+  const telemetryHealth =
+    totalTelemetrySamples > 0
+      ? Math.round(
+          (upTelemetrySamples / totalTelemetrySamples) * 100
+        )
+      : 100;
+
+  const upPercent =
+    totalTelemetrySamples > 0
+      ? Math.round(
+          (upTelemetrySamples / totalTelemetrySamples) * 100
+        )
+      : 0;
+
+  const downPercent =
+    totalTelemetrySamples > 0
+      ? Math.round(
+          (downTelemetrySamples / totalTelemetrySamples) * 100
+        )
+      : 0;
+
+  const clearedCount = Math.max(
+    0,
+    (summary.resolvedTodayCount ?? 0)
+  );
 
   return (
     <div className="flex-1 flex flex-col gap-3.5 min-w-0">
@@ -223,24 +297,38 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-baseline justify-between mt-3">
             <span className="font-title-kpi text-[26px] text-on-surface tracking-tight font-bold">{summary.activeAlarmsCount}</span>
             <div className="flex items-center gap-1 font-code-telemetry text-[10px]">
-              <span className="px-2 py-0.5 rounded-full bg-error text-on-error font-bold shadow-[0_2px_8px_rgba(186,26,26,0.3)]">1 P0</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-semibold">2 P1</span>
-              <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary">1 P2</span>
+              <span className="px-2 py-0.5 rounded-full bg-error text-on-error font-bold shadow-[0_2px_8px_rgba(186,26,26,0.3)]">
+                {criticalCount} P0
+              </span>
+              <span className="px-1.5 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed font-semibold">
+                {warningCount} P1
+              </span>
+              <span className="px-1.5 py-0.5 rounded-full bg-surface-container text-secondary">
+                {Math.max(0, activeAlarms.length - criticalCount - warningCount)} P2
+              </span>
             </div>
           </div>
           <div className="w-full bg-surface-container-high h-1.5 rounded-full mt-2.5 overflow-hidden relative">
-            <div className="absolute left-0 top-0 bottom-0 bg-primary rounded-full" style={{ width: '62%' }}></div>
+            <div
+              className="absolute left-0 top-0 bottom-0 bg-primary rounded-full"
+              style={{
+                width: `${Math.min(
+                  100,
+                  activeAlarms.length * 20
+                )}%`
+              }}
+            ></div>
           </div>
         </div>
 
-        {/* KPI 4: AI Anomalies */}
+        {/* KPI 4: Historical Anomalies */}
         <div 
           onClick={() => navigate('/ai-rca')}
           className="bg-surface-container-lowest rounded-2xl p-4 flex flex-col justify-between shadow-card border border-surface-container-high/60 cursor-pointer hover:shadow-card-hover transition-all"
         >
           <div className="flex items-start justify-between">
             <div>
-              <span className="font-label-caps text-[10px] text-secondary uppercase tracking-wider block font-semibold">AI Anomalies</span>
+              <span className="font-label-caps text-[10px] text-secondary uppercase tracking-wider block font-semibold">Historical Anomalies</span>
               <span className="font-body-sm text-[11px] text-secondary truncate">Root Cause Engine</span>
             </div>
             <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
@@ -250,12 +338,16 @@ export const DashboardPage: React.FC = () => {
           <div className="flex items-baseline justify-between mt-3">
             <span className="font-title-kpi text-[26px] text-on-surface tracking-tight font-bold">{summary.aiAnomaliesCount}</span>
             <span className="px-2 py-0.5 rounded-md bg-error-container text-on-error-container font-code-telemetry text-[11px] font-semibold tracking-tight">
-              INC-001 High SLA
+              {summary.recentIncidents[0]?.incidentId || 'No active incident'}
             </span>
           </div>
           <div className="w-full flex items-center justify-between text-secondary font-label-caps text-[10px] mt-2.5">
             <span>Inference Confidence</span>
-            <span className="font-code-telemetry text-primary font-bold">98.4%</span>
+            <span className="font-code-telemetry text-primary font-bold">
+              {summary.recentIncidents[0]
+                ? `${Math.round(summary.recentIncidents[0].confidence)}%`
+                : '—'}
+            </span>
           </div>
         </div>
       </div>
@@ -289,68 +381,10 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Live Readout Strip */}
-          <div className="grid grid-cols-3 gap-2.5 py-2.5">
-            <div className="p-2 bg-surface-container-low rounded-xl border border-surface-container-high/30 flex items-center justify-between">
-              <span className="font-label-caps text-[10px] text-secondary uppercase font-semibold">Avg Latency</span>
-              <span className="font-code-telemetry text-[12px] text-on-surface font-bold">{activeTelemetry.avgLatency}</span>
-            </div>
-            <div className="p-2 bg-surface-container-low rounded-xl border border-surface-container-high/30 flex items-center justify-between">
-              <span className="font-label-caps text-[10px] text-secondary uppercase font-semibold">Packet Loss</span>
-              <span className="font-code-telemetry text-[12px] text-tertiary font-bold">
-                {activeTelemetry.packetLoss} <span className="font-normal text-secondary text-[10px]">{activeTelemetry.lossStatus}</span>
-              </span>
-            </div>
-            <div className="p-2 bg-surface-container-low rounded-xl border border-surface-container-high/30 flex items-center justify-between">
-              <span className="font-label-caps text-[10px] text-secondary uppercase font-semibold">Throughput Peak</span>
-              <span className="font-code-telemetry text-[12px] text-primary font-bold">{activeTelemetry.peakThroughput}</span>
-            </div>
-          </div>
-
-          {/* Waveform Area Chart */}
-          <div className="relative w-full h-[200px] mt-1">
-            <svg className="w-full h-full overflow-visible" preserveAspectRatio="none" viewBox="0 0 800 200">
-              <defs>
-                <linearGradient id="telemetryGradPrimary" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#b32100" stopOpacity="0.32" />
-                  <stop offset="60%" stopColor="#dc320d" stopOpacity="0.10" />
-                  <stop offset="100%" stopColor="#ffffff" stopOpacity="0.0" />
-                </linearGradient>
-                <linearGradient id="telemetryGradSecondary" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stopColor="#575e70" stopOpacity="0.18" />
-                  <stop offset="100%" stopColor="#ffffff" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-              <line stroke="#eceef2" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="800" y1="35" y2="35" />
-              <line stroke="#eceef2" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="800" y1="80" y2="80" />
-              <line stroke="#eceef2" strokeDasharray="4 4" strokeWidth="1" x1="0" x2="800" y1="130" y2="130" />
-              <line stroke="#eceef2" strokeWidth="1" x1="0" x2="800" y1="180" y2="180" />
-
-              <path d={activeTelemetry.secondaryArea} fill="url(#telemetryGradSecondary)" className="transition-all duration-500" />
-              <path d={activeTelemetry.secondaryPath} fill="none" stroke="#575e70" strokeOpacity="0.45" strokeWidth="1.5" className="transition-all duration-500" />
-
-              <path d={activeTelemetry.primaryArea} fill="url(#telemetryGradPrimary)" className="transition-all duration-500" />
-              <path d={activeTelemetry.primaryPath} fill="none" stroke="#b32100" strokeWidth="2.5" className="transition-all duration-500" />
-
-              <line stroke="#b32100" strokeDasharray="3 3" strokeWidth="1.5" x1={activeTelemetry.peakX} x2={activeTelemetry.peakX} y1={activeTelemetry.peakY} y2="180" className="transition-all duration-500" />
-              <circle cx={activeTelemetry.peakX} cy={activeTelemetry.peakY} fill="#ffffff" r="5" stroke="#b32100" strokeWidth="3" className="transition-all duration-500" />
-              <circle className="animate-ping" cx={activeTelemetry.peakX} cy={activeTelemetry.peakY} fill="#b32100" fillOpacity="0.2" r="9" />
-            </svg>
-
-            {/* Apex Tag */}
-            <div className={`absolute top-2 ${activeTelemetry.apexStyle} -translate-x-1/2 bg-on-surface text-surface-bright px-2.5 py-1 rounded-md shadow-lg flex items-center gap-1.5 font-code-telemetry text-[10px] transition-all duration-500`}>
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-              <span>{activeTelemetry.peakTime}: <strong className="text-primary-fixed font-bold">{activeTelemetry.peakThroughput}</strong></span>
-            </div>
-          </div>
-
-          <div className="flex justify-between items-center text-secondary font-code-telemetry text-[11px] pt-1.5">
-            {activeTelemetry.labels.map((lbl, idx) => (
-              <span key={idx} className={lbl.includes('Apex') || lbl.includes('Peak') ? 'text-primary font-bold' : ''}>
-                {lbl}
-              </span>
-            ))}
-          </div>
+          <RealTelemetryChart
+            telemetry={telemetry}
+            timeRange={timeRange}
+          />
         </div>
 
         {/* Right 4 Cols: Integrity Index Donut Gauge */}
@@ -366,14 +400,37 @@ export const DashboardPage: React.FC = () => {
           <div className="relative flex items-center justify-center my-3">
             <svg className="w-40 h-40 -rotate-90" viewBox="0 0 120 120">
               <circle cx="60" cy="60" fill="none" r="48" stroke="#eceef2" strokeWidth="12" />
-              <circle cx="60" cy="60" fill="none" r="48" stroke="#006947" strokeDasharray="256.3 301.6" strokeDashoffset="0" strokeLinecap="round" strokeWidth="12" />
-              <circle cx="60" cy="60" fill="none" r="48" stroke="#dc320d" strokeDasharray="30.1 301.6" strokeDashoffset="-257" strokeLinecap="round" strokeWidth="12" />
-              <circle cx="60" cy="60" fill="none" r="48" stroke="#ba1a1a" strokeDasharray="15.1 301.6" strokeDashoffset="-288" strokeLinecap="round" strokeWidth="12" />
+              <circle
+                cx="60"
+                cy="60"
+                fill="none"
+                r="48"
+                stroke="#006947"
+                strokeDasharray={`${(upPercent / 100) * 301.6} 301.6`}
+                strokeDashoffset="0"
+                strokeLinecap="round"
+                strokeWidth="12"
+              />
+              <circle
+                cx="60"
+                cy="60"
+                fill="none"
+                r="48"
+                stroke="#ba1a1a"
+                strokeDasharray={`${(downPercent / 100) * 301.6} 301.6`}
+                strokeDashoffset={`${-((upPercent / 100) * 301.6)}`}
+                strokeLinecap="round"
+                strokeWidth="12"
+              />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
               <span className="font-label-caps text-[10px] text-secondary uppercase tracking-widest font-semibold">Global Score</span>
-              <span className="font-title-kpi text-[26px] text-on-surface font-extrabold leading-none my-0.5">94%</span>
-              <span className="font-code-telemetry text-[11px] text-tertiary font-bold tracking-tight">Optimal Class</span>
+              <span className="font-title-kpi text-[26px] text-on-surface font-extrabold leading-none my-0.5">
+                {telemetryHealth}%
+              </span>
+              <span className="font-code-telemetry text-[11px] text-tertiary font-bold tracking-tight">
+                SNMP Telemetry
+              </span>
             </div>
           </div>
 
@@ -381,31 +438,39 @@ export const DashboardPage: React.FC = () => {
             <div className="flex items-center justify-between text-[12px]">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-tertiary"></span>
-                <span className="text-on-surface font-medium">Optimal Mesh Flow</span>
+                <span className="text-on-surface font-medium">Interface UP</span>
               </div>
               <div className="flex items-center gap-1.5 font-code-telemetry">
-                <span className="text-on-surface font-semibold">85%</span>
-                <span className="text-secondary text-[11px]">· 1,020 p/s</span>
+                <span className="text-on-surface font-semibold">
+                  {upPercent}%
+                </span>
+                <span className="text-secondary text-[11px]">
+                  · {upTelemetrySamples} samples
+                </span>
               </div>
             </div>
             <div className="flex items-center justify-between text-[12px]">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-primary-container"></span>
-                <span className="text-on-surface font-medium">Degraded / Jitter</span>
+                <span className="text-on-surface font-medium">No jitter metric</span>
               </div>
               <div className="flex items-center gap-1.5 font-code-telemetry">
-                <span className="text-on-surface font-semibold">10%</span>
-                <span className="text-secondary text-[11px]">· 120 p/s</span>
+                <span className="text-on-surface font-semibold">—</span>
+                <span className="text-secondary text-[11px]">not collected</span>
               </div>
             </div>
             <div className="flex items-center justify-between text-[12px]">
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full bg-error"></span>
-                <span className="text-on-surface font-medium">Critical Route Loss</span>
+                <span className="text-on-surface font-medium">Interface DOWN</span>
               </div>
               <div className="flex items-center gap-1.5 font-code-telemetry">
-                <span className="text-error font-bold">5%</span>
-                <span className="text-secondary text-[11px]">· 60 p/s</span>
+                <span className="text-error font-bold">
+                  {downPercent}%
+                </span>
+                <span className="text-secondary text-[11px]">
+                  · {downTelemetrySamples} DOWN samples
+                </span>
               </div>
             </div>
           </div>
@@ -442,71 +507,63 @@ export const DashboardPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-surface-container-high/40 font-code-telemetry text-[11px]">
-                {/* R1 */}
-                <tr onClick={() => navigate('/devices/R1')} className="hover:bg-surface-container-low transition-colors cursor-pointer">
-                  <td className="py-2 font-bold text-on-surface flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[15px] text-tertiary">hub</span>
-                    <span>R1 Core</span>
-                  </td>
-                  <td className="py-2">
-                    <span className="px-1.5 py-0.5 rounded-full bg-tertiary-container/20 text-tertiary font-semibold text-[10px]">Online</span>
-                  </td>
-                  <td className="py-2 text-secondary">34%</td>
-                  <td className="py-2 text-secondary">42%</td>
-                  <td className="py-2 text-right font-semibold text-on-surface">12ms</td>
-                </tr>
-                {/* R2 */}
-                <tr onClick={() => navigate('/devices/R2')} className="hover:bg-surface-container-low transition-colors cursor-pointer">
-                  <td className="py-2 font-bold text-on-surface flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[15px] text-amber-500">router</span>
-                    <span>R2 Edge</span>
-                  </td>
-                  <td className="py-2">
-                    <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-semibold text-[10px]">Warning</span>
-                  </td>
-                  <td className="py-2 text-secondary">58%</td>
-                  <td className="py-2 text-secondary">64%</td>
-                  <td className="py-2 text-right font-semibold text-on-surface">38ms</td>
-                </tr>
-                {/* R3 */}
-                <tr onClick={() => navigate('/devices/R3')} className="hover:bg-surface-container-low transition-colors bg-error-container/20 cursor-pointer">
-                  <td className="py-2 font-bold text-error flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[15px] text-error animate-pulse">warning</span>
-                    <span>R3 Core</span>
-                  </td>
-                  <td className="py-2">
-                    <span className="px-1.5 py-0.5 rounded-full bg-error text-on-error font-bold text-[10px] shadow-[0_2px_6px_rgba(186,26,26,0.3)]">Critical</span>
-                  </td>
-                  <td className="py-2 font-bold text-error">92%</td>
-                  <td className="py-2 text-error">78%</td>
-                  <td className="py-2 text-right font-bold text-error">180ms</td>
-                </tr>
-                {/* R4 */}
-                <tr onClick={() => navigate('/devices/R4')} className="hover:bg-surface-container-low transition-colors cursor-pointer">
-                  <td className="py-2 font-bold text-on-surface flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[15px] text-amber-500">lan</span>
-                    <span>R4 Dist</span>
-                  </td>
-                  <td className="py-2">
-                    <span className="px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-900 font-semibold text-[10px]">Warning</span>
-                  </td>
-                  <td className="py-2 text-amber-700">66%</td>
-                  <td className="py-2 text-secondary">52%</td>
-                  <td className="py-2 text-right font-semibold text-amber-700">54ms</td>
-                </tr>
-                {/* SRV-01 */}
-                <tr onClick={() => navigate('/devices/SRV-01')} className="hover:bg-surface-container-low transition-colors cursor-pointer">
-                  <td className="py-2 font-bold text-on-surface flex items-center gap-1.5">
-                    <span className="material-symbols-outlined text-[15px] text-tertiary">storage</span>
-                    <span>DC Server</span>
-                  </td>
-                  <td className="py-2">
-                    <span className="px-1.5 py-0.5 rounded-full bg-tertiary-container/20 text-tertiary font-semibold text-[10px]">Online</span>
-                  </td>
-                  <td className="py-2 text-secondary">48%</td>
-                  <td className="py-2 text-secondary">68%</td>
-                  <td className="py-2 text-right font-semibold text-on-surface">4ms</td>
-                </tr>
+                {realDevices.map((device) => {
+                  const id = String(device.id).toUpperCase();
+                  const status = String(device.status || 'healthy').toLowerCase();
+                  const isCritical = status === 'critical';
+                  const isWarning = status === 'warning';
+
+                  return (
+                    <tr
+                      key={id}
+                      onClick={() => navigate(`/devices/${id}`)}
+                      className={`hover:bg-surface-container-low transition-colors cursor-pointer ${
+                        isCritical ? 'bg-error-container/20' : ''
+                      }`}
+                    >
+                      <td className={`py-2 font-bold flex items-center gap-1.5 ${
+                        isCritical ? 'text-error' : 'text-on-surface'
+                      }`}>
+                        <span className={`material-symbols-outlined text-[15px] ${
+                          isCritical ? 'text-error' :
+                          isWarning ? 'text-amber-500' :
+                          'text-tertiary'
+                        }`}>
+                          router
+                        </span>
+                        <span>{device.name || id}</span>
+                      </td>
+
+                      <td className="py-2">
+                        <span className={`px-1.5 py-0.5 rounded-full font-semibold text-[10px] ${
+                          isCritical
+                            ? 'bg-error text-on-error'
+                            : isWarning
+                              ? 'bg-amber-100 text-amber-900'
+                              : 'bg-tertiary-container/20 text-tertiary'
+                        }`}>
+                          {status === 'critical'
+                            ? 'Critical'
+                            : status === 'warning'
+                              ? 'Warning'
+                              : 'Online'}
+                        </span>
+                      </td>
+
+                      <td className="py-2 text-secondary">
+                        {device.cpu != null ? `${Math.round(device.cpu)}%` : 'N/A'}
+                      </td>
+
+                      <td className="py-2 text-secondary">
+                        {device.memory != null ? `${Math.round(device.memory)}%` : 'N/A'}
+                      </td>
+
+                      <td className="py-2 text-right font-semibold text-on-surface">
+                        {device.latency != null ? `${device.latency}ms` : 'N/A'}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -523,7 +580,9 @@ export const DashboardPage: React.FC = () => {
               onClick={() => navigate('/ai-rca')}
               className="px-2 py-0.5 rounded-full bg-surface-container text-secondary font-code-telemetry text-[11px] hover:bg-surface-container-high"
             >
-              1 Active
+              {summary.recentIncidents.filter(i =>
+                String(i.severity).toLowerCase() === 'critical'
+              ).length} Critical
             </button>
           </div>
 
@@ -568,8 +627,8 @@ export const DashboardPage: React.FC = () => {
         <div className="lg:col-span-3 bg-surface-container-lowest rounded-2xl p-4 flex flex-col justify-between shadow-card border border-surface-container-high/60">
           <div className="flex items-center justify-between pb-2.5 border-b border-surface-container-high/50">
             <div>
-              <h2 className="font-headline-md text-[15px] font-bold text-on-surface">Auto-Mitigation</h2>
-              <span className="font-body-sm text-[11px] text-secondary">Closed-Loop Self-Healing</span>
+              <h2 className="font-headline-md text-[15px] font-bold text-on-surface">Correlation & Recovery</h2>
+              <span className="font-body-sm text-[11px] text-secondary">Incident Correlation</span>
             </div>
             <span className="material-symbols-outlined text-tertiary text-[18px]">healing</span>
           </div>
@@ -577,27 +636,29 @@ export const DashboardPage: React.FC = () => {
           <div className="flex flex-col gap-2 my-2 text-[12px]">
             <div className="p-2.5 rounded-xl bg-tertiary-container/10 border border-tertiary/20 flex flex-col gap-1">
               <div className="flex items-center justify-between font-code-telemetry text-[10px]">
-                <span className="text-tertiary font-bold">Closed-Loop Healer</span>
+                <span className="text-tertiary font-bold">Correlation Engine</span>
                 <span className="text-tertiary">Armed</span>
               </div>
               <p className="font-body-sm text-[11px] text-secondary leading-snug">
-                Policy allows automated BGP reroute around degrading optical ports.
+                Cogninet correlates telemetry, alarms and topology evidence for explainable RCA.
               </p>
             </div>
 
             <div className="p-2.5 rounded-xl bg-surface-container-low border border-surface-container-high/40 flex flex-col gap-1">
               <div className="flex items-center justify-between font-code-telemetry text-[10px]">
-                <span className="font-semibold text-on-surface">Recent Heals</span>
-                <span className="text-secondary font-bold">7 Today</span>
+                <span className="font-semibold text-on-surface">Recent Resolutions</span>
+                <span className="text-secondary font-bold">{clearedCount} Resolved</span>
               </div>
               <div className="space-y-1 font-code-telemetry text-[10px] text-secondary">
                 <div className="flex justify-between">
-                  <span>R2 queue overflow</span>
-                  <span className="text-tertiary font-semibold">100% healed</span>
+                  <span>Interface-down alarms</span>
+                  <span className="text-tertiary font-semibold">{clearedCount} resolved</span>
                 </div>
                 <div className="flex justify-between">
-                  <span>R4 BGP oscillation</span>
-                  <span className="text-tertiary font-semibold">Dampened</span>
+                  <span>R1 ↔ R2 link correlation</span>
+                  <span className="text-tertiary font-semibold">
+                    {summary.recentIncidents.length ? 'Correlated' : 'None'}
+                  </span>
                 </div>
               </div>
             </div>

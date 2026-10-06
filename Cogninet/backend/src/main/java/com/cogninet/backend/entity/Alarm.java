@@ -8,6 +8,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
@@ -63,12 +64,36 @@ public class Alarm {
     public Alarm() {
     }
 
-    public Alarm(String alarmId, Device device, String alarmType, String severity, String status) {
+    public Alarm(
+            String alarmId,
+            Device device,
+            String alarmType,
+            String severity,
+            String status
+    ) {
         this.alarmId = alarmId;
         this.device = device;
         this.alarmType = alarmType;
         this.severity = severity;
         this.status = status;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        if (firstSeenAt == null) {
+            firstSeenAt = now;
+        }
+
+        if (lastSeenAt == null) {
+            lastSeenAt = now;
+        }
+
+        if (createdAt == null) {
+            createdAt = now;
+        }
     }
 
     public Long getId() {
@@ -177,9 +202,17 @@ public class Alarm {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
         Alarm alarm = (Alarm) o;
+
         return id != null && Objects.equals(id, alarm.id);
     }
 
@@ -190,11 +223,16 @@ public class Alarm {
 
     @Override
     public String toString() {
+
         return "Alarm{" +
                 "id=" + id +
                 ", alarmId='" + alarmId + '\'' +
-                ", deviceId=" + (device != null ? device.getId() : null) +
-                ", interfaceId=" + (networkInterface != null ? networkInterface.getId() : null) +
+                ", deviceId=" +
+                (device != null ? device.getId() : null) +
+                ", interfaceId=" +
+                (networkInterface != null
+                        ? networkInterface.getId()
+                        : null) +
                 ", alarmType='" + alarmType + '\'' +
                 ", severity='" + severity + '\'' +
                 ", status='" + status + '\'' +

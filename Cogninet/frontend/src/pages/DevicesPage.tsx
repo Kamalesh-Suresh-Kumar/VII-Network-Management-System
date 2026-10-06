@@ -69,7 +69,7 @@ export const DevicesPage: React.FC = () => {
         breadcrumbCategory="Devices"
         breadcrumbSub="Fleet Telemetry"
         title="Managed Devices"
-        subtitle="Autonomous multi-region fabric & telemetry diagnostics panel"
+        subtitle="GNS3 / FRRouting device and interface telemetry"
         icon="router"
         onSearch={(q) => {
           setSearchTerm(q);
@@ -169,7 +169,7 @@ export const DevicesPage: React.FC = () => {
           </div>
           <div className="flex items-baseline justify-between mt-2">
             <span className="font-title-kpi text-2xl font-bold text-error leading-none">{criticalCount}</span>
-            <span className="font-code-telemetry text-[11px] text-error font-semibold">Node R3 Degraded</span>
+            <span className="font-code-telemetry text-[11px] text-error font-semibold">No critical nodes</span>
           </div>
           <div className="w-full bg-surface-container-high h-1 rounded-full mt-2.5 overflow-hidden">
             <div className="bg-error h-full rounded-full" style={{ width: `${(criticalCount / (totalCount || 1)) * 100}%` }}></div>
@@ -222,10 +222,10 @@ export const DevicesPage: React.FC = () => {
               className="bg-transparent text-xs font-semibold text-on-surface border-none p-0 focus:ring-0 cursor-pointer"
             >
               <option value="all">All Roles</option>
-              <option value="Core Router">Core Routers</option>
+              <option value="FRRouting Router">FRRouting Routers</option>
               <option value="Edge Router">Edge Routers</option>
               <option value="Distribution Switch">Distribution</option>
-              <option value="DC Server Cluster">DC Servers</option>
+              <option value="Core Router">Core Routers</option>
             </select>
           </div>
         </div>
@@ -347,7 +347,7 @@ export const DevicesPage: React.FC = () => {
                             className={`h-full rounded-full ${
                               dev.cpu > 80 ? 'bg-error' : dev.cpu > 60 ? 'bg-amber-500' : 'bg-tertiary'
                             }`}
-                            style={{ width: `${dev.cpu}%` }}
+                            style={{ width: `$N/C` }}
                           ></div>
                         </div>
                         <span
@@ -355,7 +355,7 @@ export const DevicesPage: React.FC = () => {
                             dev.cpu > 80 ? 'text-error' : 'text-on-surface'
                           }`}
                         >
-                          {dev.cpu}%
+                          N/C
                         </span>
                       </div>
                     </td>
@@ -364,7 +364,7 @@ export const DevicesPage: React.FC = () => {
                     <td className="py-3 px-3">
                       <div className="flex flex-col">
                         <span className="font-code-telemetry text-xs font-semibold text-on-surface">
-                          {dev.memory}%
+                          N/C
                         </span>
                         {dev.memoryUsedGb && dev.memoryTotalGb && (
                           <span className="font-code-telemetry text-[9px] text-secondary">
@@ -381,7 +381,7 @@ export const DevicesPage: React.FC = () => {
                           dev.latency > 100 ? 'text-error' : dev.latency > 30 ? 'text-amber-700' : 'text-on-surface'
                         }`}
                       >
-                        {dev.latency} ms
+                        N/C
                       </span>
                     </td>
 
@@ -392,7 +392,7 @@ export const DevicesPage: React.FC = () => {
                           dev.packetLoss > 5 ? 'text-error' : dev.packetLoss > 1 ? 'text-amber-700' : 'text-tertiary'
                         }`}
                       >
-                        {dev.packetLoss}%
+                        N/C
                       </span>
                     </td>
 

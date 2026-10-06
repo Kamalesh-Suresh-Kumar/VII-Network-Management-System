@@ -1,0 +1,177 @@
+Terminal 1 — Backend
+cd ~/Desktop/VII-Network-Management-System/Cogninet/backend
+mvn spring-boot:run
+
+Wait until you see that Spring Boot has started on port 8080.
+Terminal 2 — GNS3 Server
+gns3server --host 127.0.0.1 --port 3080
+
+Keep this terminal running.
+Terminal 3 — GNS3 Application
+Open another terminal:
+gns3
+
+Then:
+1. Open Cogninet-Network
+2. Make sure R1, R2 and R3 are running
+3. Make sure the links are connected:
+R1 eth0 ─── R2 eth0
+R1 eth1 ─── R3 eth0
+R2 eth1 ─── R3 eth1
+
+4. Make sure R1 eth1 is UP
+5. Do not inject any fault yet.
+Your starting topology should be:
+             R1
+            /  \
+           /    \
+         R2──────R3
+
+Terminal 4 — SNMP Collector
+cd ~/Desktop/VII-Network-Management-System/Cogninet
+source ../.venv/bin/activate
+python telemetry/snmp/snmp_collector.py
+
+KEEP THIS TERMINAL RUNNING.
+You should see repeated collection cycles because we changed the collector to run continuously.
+You want to see something like:
+R1 eth0 ...
+R1 eth1 ...
+R1 eth2 ...
+
+R2 eth0 ...
+R2 eth1 ...
+
+R3 eth0 ...
+R3 eth1 ...
+
+Next SNMP collection in 10 seconds...
+
+This is one of your most important terminals.
+Terminal 5 — Frontend
+cd ~/Desktop/VII-Network-Management-System/Cogninet/frontend
+npm run dev
+
+Then open the Vite URL shown by the terminal, normally:
+http://localhost:3000
+
+Terminal 6 — Final Health Check
+After all services are running:
+curl -s http://localhost:8080/api/devices | python -m json.tool
+
+Then:
+curl -s http://localhost:8080/api/telemetry | python -m json.tool
+
+Then:
+curl -s http://localhost:8080/api/alarms | python -m json.tool
+
+Then:
+curl -s http://localhost:8080/api/incidents | python -m json.tool
+
+Quick Device Check
+curl -s http://localhost:8080/api/devices | python -c '
+import sys,json
+d=json.load(sys.stdin)
+print("Devices:", len(d))
+for x in d:
+    print(x["deviceId"], x["status"])
+'
+
+Expected:
+Devices: 3
+R1 ...
+R2 ...
+R3 ...
+
+Quick Telemetry Check
+curl -s http://localhost:8080/api/telemetry | python -c '
+import sys,json
+x=json.load(sys.stdin)
+for r in x[-10:]:
+    print(
+        r["device"]["deviceId"],
+        r["metricName"],
+        r["metricValue"],
+        r["timestamp"]
+    )
+'
+
+You should see recent telemetry from the routers.
+Final presentation state
+Before you start presenting, make sure:
+GNS3
+  ├── R1   🟢
+  ├── R2   🟢
+  └── R3   🟢
+
+R1 ↔ R2   🟢
+R1 ↔ R3   🟢
+R2 ↔ R3   🟢
+
+OSPF      🟢
+SNMP      🟢
+Collector 🟢
+Backend   🟢
+Frontend  🟢
+
+Active Alarms: 0
+
+Then open the browser on the Dashboard.
+Your final 5-terminal setup
+You actually only need these 5 running terminals:
+TERMINAL 1
+Backend
+mvn spring-boot:run
+
+
+TERMINAL 2
+GNS3 Server
+gns3server --host 127.0.0.1 --port 3080
+
+
+TERMINAL 3
+GNS3 GUI
+gns3
+
+
+TERMINAL 4
+SNMP Collector
+cd ~/Desktop/VII-Network-Management-System/Cogninet
+source ../.venv/bin/activate
+python telemetry/snmp/snmp_collector.py
+
+
+TERMINAL 5
+Frontend
+cd ~/Desktop/VII-Network-Management-System/Cogninet/frontend
+npm run dev
+
+No Terminal for NETCONF.
+No manual Docker start for cogninet-netconf.
+No need to run the checking commands continuously.
+Then your live presentation flow is simply:
+START HEALTHY
+     ↓
+Dashboard
+     ↓
+GNS3 topology
+     ↓
+Inject R1 eth1 DOWN
+     ↓
+SNMP detects it
+     ↓
+Alarm becomes ACTIVE
+     ↓
+Sidebar becomes 1
+     ↓
+AI/RCA shows anomaly + evidence
+     ↓
+Restore R1 eth1
+     ↓
+SNMP detects UP
+     ↓
+Alarm becomes CLEARED
+     ↓
+Sidebar becomes 0
+
+That is the cleanest and safest startup procedure for your current implemented COGINET project.

@@ -21,30 +21,49 @@ export const AlarmsPage: React.FC = () => {
 
   const navigate = useNavigate();
 
-  const fetchAlarmData = async () => {
+  const fetchAlarmData = async (showLoading = true) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
+
       setError(null);
+
       const data = await getAlarms({
         severity: severityFilter,
         search: searchTerm,
       });
+
       setAlarms(data);
 
       if (alarmId) {
-        const found = data.find(a => a.id.toLowerCase() === alarmId.toLowerCase());
+        const found = data.find(
+          a => a.id.toLowerCase() === alarmId.toLowerCase()
+        );
         setSelectedAlarm(found || null);
       }
     } catch (err) {
       setError('Could not retrieve network alarms.');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
-    fetchAlarmData();
+    fetchAlarmData(true);
   }, [severityFilter]);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      fetchAlarmData(false);
+    }, 5000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, [severityFilter, alarmId]);
 
   const handleSelectAlarm = (alarm: Alarm) => {
     if (selectedAlarm?.id === alarm.id) {
@@ -64,7 +83,7 @@ export const AlarmsPage: React.FC = () => {
   const handleMitigate = async () => {
     if (!selectedAlarm) return;
     setMitigating(true);
-    await mitigateIncident(selectedAlarm.incidentId || 'INC-001');
+    await mitigateIncident(selectedAlarm.incidentId || selectedAlarm.id);
     setTimeout(() => {
       setMitigating(false);
       alert(`Mitigation policy executed for ${selectedAlarm.deviceId}. Traffic shifted to R1/R2 backup trunks.`);
@@ -83,6 +102,31 @@ export const AlarmsPage: React.FC = () => {
     }
     return true;
   });
+
+  const activeOnly = alarms.filter(a =>
+    !['resolved', 'cleared'].includes(String(a.status).toLowerCase())
+  );
+
+  const criticalAlarms = activeOnly.filter(a =>
+    String(a.severity).toUpperCase() === 'P0' ||
+    String(a.severity).toLowerCase() === 'critical'
+  );
+
+  const warningAlarms = activeOnly.filter(a =>
+    String(a.severity).toUpperCase() === 'P1' ||
+    String(a.severity).toLowerCase() === 'warning'
+  );
+
+  const infoAlarms = activeOnly.filter(a =>
+    !criticalAlarms.includes(a) && !warningAlarms.includes(a)
+  );
+
+  const resolvedAlarms = alarms.filter(a =>
+    ['resolved', 'cleared'].includes(String(a.status).toLowerCase())
+  );
+
+  const firstCritical = criticalAlarms[0];
+  const firstWarning = warningAlarms[0];
 
   return (
     <div className="flex-1 flex flex-col gap-3.5 min-w-0">
@@ -110,15 +154,20 @@ export const AlarmsPage: React.FC = () => {
           </div>
           <div className="flex items-baseline justify-between mt-1.5">
             <div className="text-2xl font-extrabold text-error font-code-telemetry tracking-tight">
-              1 <span className="text-xs font-sans text-error font-semibold">P0</span>
+              {criticalAlarms.length} <span className="text-xs font-sans text-error font-semibold">P0</span>
             </div>
             <span className="font-code-telemetry text-[10px] font-bold px-2 py-0.5 rounded-full bg-error-container text-on-error-container">
               Immediate Intervene
             </span>
           </div>
           <div className="mt-1.5 flex items-center gap-1 text-[11px] text-secondary">
-            <span className="font-bold text-error">R3::eth0</span>
-            <span className="truncate">Optical attenuation loss</span>
+            <span className="font-bold text-error">
+              {firstCritical?.deviceName || 'None'}
+              {firstCritical?.interfaceName ? `::${firstCritical.interfaceName}` : ''}
+            </span>
+            <span className="truncate">
+              {firstCritical?.title || 'No active critical alarm'}
+            </span>
           </div>
         </div>
 
@@ -134,15 +183,17 @@ export const AlarmsPage: React.FC = () => {
           </div>
           <div className="flex items-baseline justify-between mt-1.5">
             <div className="text-2xl font-extrabold text-on-surface font-code-telemetry tracking-tight">
-              2 <span className="text-xs font-sans text-primary font-semibold">P1</span>
+              {warningAlarms.length} <span className="text-xs font-sans text-primary font-semibold">P1</span>
             </div>
             <span className="font-code-telemetry text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary-fixed text-on-primary-fixed">
-              Buffer Queue Drop
+              Interface / telemetry alarms
             </span>
           </div>
           <div className="mt-1.5 flex items-center gap-1 text-[11px] text-secondary">
-            <span className="font-bold text-primary">+1</span>
-            <span className="truncate">R2 eth1 &amp; R4 eth0 degraded</span>
+            <span className="font-bold text-primary">{warningAlarms.length}</span>
+            <span className="truncate">
+              {firstWarning?.title || 'No active warning alarms'}
+            </span>
           </div>
         </div>
 
@@ -158,14 +209,16 @@ export const AlarmsPage: React.FC = () => {
           </div>
           <div className="flex items-baseline justify-between mt-1.5">
             <div className="text-2xl font-extrabold text-on-surface font-code-telemetry tracking-tight">
-              5 <span className="text-xs font-sans text-secondary font-semibold">P2-P3</span>
+              {infoAlarms.length} <span className="text-xs font-sans text-secondary font-semibold">P2-P3</span>
             </div>
             <span className="font-code-telemetry text-[10px] font-medium px-2 py-0.5 rounded-full bg-surface-container text-secondary">
               Telemetry Monitored
             </span>
           </div>
           <div className="mt-1.5 flex items-center gap-1 text-[11px] text-secondary">
-            <span className="truncate">BGP keepalive drift &amp; ACL policy</span>
+            <span className="truncate">
+              {infoAlarms.length ? 'Telemetry observations' : 'No informational alarms'}
+            </span>
           </div>
         </div>
 
@@ -181,15 +234,17 @@ export const AlarmsPage: React.FC = () => {
           </div>
           <div className="flex items-baseline justify-between mt-1.5">
             <div className="text-2xl font-extrabold text-tertiary font-code-telemetry tracking-tight">
-              18
+              {resolvedAlarms.length}
             </div>
             <span className="font-code-telemetry text-[10px] font-bold px-2 py-0.5 rounded-full bg-tertiary-container/20 text-tertiary">
-              100% Heuristic
+              Backend Resolved
             </span>
           </div>
           <div className="mt-1.5 flex items-center gap-1 text-[11px] text-secondary">
-            <span className="text-tertiary font-bold">14.2 min</span>
-            <span className="truncate">mean autonomous recovery time</span>
+            <span className="text-tertiary font-bold">
+              {resolvedAlarms.length}
+            </span>
+            <span className="truncate">resolved alarm records</span>
           </div>
         </div>
       </div>
@@ -206,7 +261,7 @@ export const AlarmsPage: React.FC = () => {
                 <span className="font-label-caps text-[10px] uppercase tracking-wider font-extrabold text-secondary">
                   Pipeline Queue
                 </span>
-                <span className="font-headline-md text-xs font-bold text-on-surface">Active Correlated Stream</span>
+                <span className="font-headline-md text-xs font-bold text-on-surface">Alarm Records</span>
               </div>
 
               {/* Category filters */}
@@ -253,7 +308,7 @@ export const AlarmsPage: React.FC = () => {
 
             {/* Table Wrapper */}
             {loading ? (
-              <LoadingState message="Loading alarm stream..." />
+              <LoadingState message="Loading alarm records..." />
             ) : filteredAlarms.length === 0 ? (
               <EmptyState title="No active alarms matching filter" description="All alarms in this category are normal." />
             ) : (
@@ -368,7 +423,7 @@ export const AlarmsPage: React.FC = () => {
             )}
 
             <div className="flex items-center justify-between pt-2 mt-auto border-t border-surface-container-high/40 font-code-telemetry text-[11px] text-secondary shrink-0">
-              <span>Showing {filteredAlarms.length} of {alarms.length} active alarms (18 auto-resolved)</span>
+              <span>Showing {filteredAlarms.length} of {alarms.length} alarm records</span>
               <div className="flex items-center gap-1">
                 <span className="px-2 py-0.5 rounded bg-primary text-on-primary font-bold">1</span>
                 <span className="px-2 py-0.5 rounded bg-surface-container text-secondary">2</span>
@@ -428,15 +483,15 @@ export const AlarmsPage: React.FC = () => {
                   <span className="font-code-telemetry font-bold text-xs text-error mt-0.5">
                     {selectedAlarm.interfaceName || 'eth0'}
                   </span>
-                  <span className="font-code-telemetry text-[10px] text-secondary">10G SFP+ Link</span>
+                  <span className="font-code-telemetry text-[10px] text-secondary">SNMP Interface Telemetry</span>
                 </div>
               </div>
 
               {/* Attenuation Waveform Sparkline */}
               <div className="flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-[10px] uppercase font-extrabold text-secondary">Metric Telemetry</span>
-                  <span className="font-code-telemetry text-[10px] font-bold text-error">-21.4 dBm (Severe)</span>
+                  <span className="text-[10px] uppercase font-extrabold text-secondary">Telemetry Evidence</span>
+                  <span className="font-code-telemetry text-[10px] font-bold text-error">Interface state</span>
                 </div>
                 <div className="bg-surface-container-low p-2.5 rounded-xl border border-surface-container-high/40 flex flex-col gap-2">
                   <div className="w-full h-8 relative">
@@ -455,14 +510,14 @@ export const AlarmsPage: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-2 pt-1 border-t border-surface-container-high/40 font-code-telemetry text-[11px]">
                     <div>
-                      <span className="text-[9px] text-secondary block uppercase">Optical Power</span>
-                      <span className="font-bold text-error">-21.4 dBm</span>
-                      <span className="text-[9px] text-secondary block font-sans">Baseline: -7.5 dBm</span>
+                      <span className="text-[9px] text-secondary block uppercase">Interface Status</span>
+                      <span className="font-bold text-error">DOWN</span>
+                      <span className="text-[9px] text-secondary block font-sans">Source: SNMP</span>
                     </div>
                     <div>
-                      <span className="text-[9px] text-secondary block uppercase">VoQ Buffer Status</span>
-                      <span className="font-bold text-error">99.8% (Overflow)</span>
-                      <span className="text-[9px] text-secondary block font-sans">Loss: 12.4%</span>
+                      <span className="text-[9px] text-secondary block uppercase">Alarm Status</span>
+                      <span className="font-bold text-error">{selectedAlarm.status}</span>
+                      <span className="text-[9px] text-secondary block font-sans">Historical alarm record</span>
                     </div>
                   </div>
                 </div>
@@ -476,11 +531,11 @@ export const AlarmsPage: React.FC = () => {
                     <span>AI Correlation Engine</span>
                   </div>
                   <span className="font-code-telemetry text-[10px] font-extrabold bg-primary text-on-primary px-2 py-0.2 rounded-full">
-                    91% Confidence
+                    {selectedAlarm.incidentId ? '95% Confidence' : 'No incident confidence'}
                   </span>
                 </div>
                 <p className="text-xs text-on-surface leading-snug font-medium">
-                  Correlated with Root Incident <strong className="text-primary font-code-telemetry">INC-001</strong>. Transceiver degradation triggered subsequent buffer saturation on downstream peers.
+                  Correlated with the backend incident record and interface-down telemetry.
                 </p>
               </div>
 
@@ -488,7 +543,7 @@ export const AlarmsPage: React.FC = () => {
               <div className="bg-surface-container-low p-2.5 rounded-xl border border-surface-container-high/40 flex flex-col gap-1">
                 <span className="text-[9.5px] uppercase font-bold text-secondary">Root Cause Diagnostics</span>
                 <p className="text-xs text-secondary leading-tight">
-                  Optical fiber patch micro-bend or degraded SFP28 laser diode on {selectedAlarm.deviceId} port {selectedAlarm.interfaceName || 'eth0'}. Drain ingress traffic to protect core mesh.
+                  Backend evidence reports an interface operational-state transition on the affected device.
                 </p>
               </div>
             </div>
@@ -501,7 +556,7 @@ export const AlarmsPage: React.FC = () => {
                 className="w-full py-2.5 px-3 rounded-xl bg-primary hover:opacity-90 text-on-primary text-xs font-bold shadow-primary-glow transition-all flex items-center justify-center gap-2"
               >
                 <span className="material-symbols-outlined text-[16px]">bolt</span>
-                <span>{mitigating ? 'Applying Auto-Evacuation...' : `Auto-Mitigate (Evacuate ${selectedAlarm.deviceId})`}</span>
+                <span>{mitigating ? 'Reviewing Incident...' : `Review Correlated Incident`}</span>
               </button>
 
               <div className="grid grid-cols-2 gap-2">

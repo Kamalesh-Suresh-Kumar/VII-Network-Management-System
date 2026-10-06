@@ -40,7 +40,7 @@ export const TopologyPage: React.FC = () => {
           breadcrumbCategory="Topology"
           breadcrumbSub="Core Fabric"
           title="Network Topology"
-          subtitle="Visualize network relationships, optical degradation & device health"
+          subtitle="Visualize network relationships, interface state & device health"
           icon="hub"
         />
         <LoadingState message="Rendering Network Fabric Mesh..." subMessage="Calculating active links and telemetry vectors" />
@@ -55,13 +55,33 @@ export const TopologyPage: React.FC = () => {
           breadcrumbCategory="Topology"
           breadcrumbSub="Core Fabric"
           title="Network Topology"
-          subtitle="Visualize network relationships, optical degradation & device health"
+          subtitle="Visualize network relationships, interface state & device health"
           icon="hub"
         />
         <ErrorState message={error || 'Failed to load topology'} onRetry={fetchTopologyData} />
       </div>
     );
   }
+
+  // Real topology-derived metrics
+  const nodeById = new Map(
+    topology.nodes.map(node => [node.id, node])
+  );
+
+  const healthyLinks = topology.links.filter(
+    link => link.status === 'healthy'
+  ).length;
+
+  const degradedLinks = topology.links.filter(
+    link => link.status !== 'healthy'
+  ).length;
+
+  const fabricHealth =
+    topology.links.length === 0
+      ? 0
+      : Math.round(
+          (healthyLinks / topology.links.length) * 100
+        );
 
   return (
     <div className="flex-1 flex flex-col gap-3 min-w-0 max-w-full">
@@ -70,7 +90,7 @@ export const TopologyPage: React.FC = () => {
         breadcrumbCategory="Topology"
         breadcrumbSub="Core Fabric"
         title="Network Topology"
-        subtitle="Visualize network relationships, optical degradation & device health"
+        subtitle="Visualize network relationships, interface state & device health"
         icon="hub"
       />
 
@@ -80,8 +100,8 @@ export const TopologyPage: React.FC = () => {
           <div>
             <div className="font-label-caps text-secondary uppercase text-[10px] font-semibold">Fabric Health</div>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="font-title-kpi text-tertiary font-bold text-2xl">94%</span>
-              <span className="font-code-telemetry text-[11px] text-tertiary font-semibold">+1.2% sync</span>
+              <span className="font-title-kpi text-tertiary font-bold text-2xl">{fabricHealth}%</span>
+              <span className="font-code-telemetry text-[11px] text-tertiary font-semibold">LIVE</span>
             </div>
           </div>
           <div className="w-9 h-9 rounded-xl bg-tertiary-container/15 flex items-center justify-center text-tertiary">
@@ -93,8 +113,8 @@ export const TopologyPage: React.FC = () => {
           <div>
             <div className="font-label-caps text-secondary uppercase text-[10px] font-semibold">Total Monitored Nodes</div>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="font-title-kpi text-on-surface font-bold text-2xl">6 Nodes</span>
-              <span className="font-body-sm text-[11px] text-secondary">(5 Active + 1 Server)</span>
+              <span className="font-title-kpi text-on-surface font-bold text-2xl">{topology.nodes.length} Nodes</span>
+              <span className="font-body-sm text-[11px] text-secondary">GNS3 / FRRouting</span>
             </div>
           </div>
           <div className="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center text-secondary">
@@ -106,8 +126,8 @@ export const TopologyPage: React.FC = () => {
           <div>
             <div className="font-label-caps text-secondary uppercase text-[10px] font-semibold">Active Links</div>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="font-title-kpi text-on-surface font-bold text-2xl">8</span>
-              <span className="font-body-sm text-[11px] text-tertiary font-medium">7 Operational</span>
+              <span className="font-title-kpi text-on-surface font-bold text-2xl">{topology.links.length}</span>
+              <span className="font-body-sm text-[11px] text-tertiary font-medium">{healthyLinks} Operational</span>
             </div>
           </div>
           <div className="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center text-secondary">
@@ -119,8 +139,8 @@ export const TopologyPage: React.FC = () => {
           <div>
             <div className="font-label-caps text-primary uppercase text-[10px] font-bold">Degraded Links</div>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="font-title-kpi text-primary font-bold text-2xl">1</span>
-              <span className="font-body-sm text-[11px] text-primary font-semibold">Incident #INC-001</span>
+              <span className="font-title-kpi text-primary font-bold text-2xl">{degradedLinks}</span>
+              <span className="font-body-sm text-[11px] text-primary font-semibold">{degradedLinks ? 'Requires attention' : 'All links healthy'}</span>
             </div>
           </div>
           <div className="w-9 h-9 rounded-xl bg-primary-fixed flex items-center justify-center text-primary">
@@ -154,7 +174,7 @@ export const TopologyPage: React.FC = () => {
               <div className="h-4 w-px bg-surface-container-high"></div>
               <div className="flex items-center gap-1.5 text-[11px] font-code-telemetry text-secondary">
                 <span className="w-2 h-2 rounded-full bg-tertiary"></span>
-                <span>AS64512 • Mesh Path MP-8942</span>
+                <span>COGINET • GNS3 / FRRouting</span>
               </div>
             </div>
 
@@ -216,30 +236,43 @@ export const TopologyPage: React.FC = () => {
               <rect width="100%" height="100%" fill="url(#gridPattern)" />
             </svg>
 
-            {/* Connection Links Vector Plane (ViewBox 900 x 680) */}
+            {/* Real topology connection links */}
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none transition-transform duration-300"
               style={{ transform: `scale(${zoomLevel})` }}
-              viewBox="0 0 900 680"
+              viewBox="0 0 100 100"
               preserveAspectRatio="none"
             >
-              {/* Healthy Link: R1 (450, 95) -> R2 (240, 260) */}
-              <line x1="450" y1="95" x2="240" y2="260" stroke="#00855b" strokeWidth="3" strokeLinecap="round" />
+              {topology.links.map((link) => {
+                const source = nodeById.get(link.source);
+                const target = nodeById.get(link.target);
 
-              {/* Degraded Link with Packet Drop: R1 (450, 95) -> R3 (660, 260) */}
-              <line x1="450" y1="95" x2="660" y2="260" stroke="#ba1a1a" strokeWidth="3.5" strokeDasharray="6,6" className="animate-pulse" filter="url(#glowPulse)" />
+                if (!source || !target) return null;
 
-              {/* Warning Link: R2 (240, 260) -> R4 (660, 420) */}
-              <line x1="240" y1="260" x2="660" y2="420" stroke="#916f68" strokeWidth="2.5" strokeDasharray="5,5" />
+                const stroke =
+                  link.status === 'critical'
+                    ? '#ba1a1a'
+                    : link.status === 'warning'
+                      ? '#916f68'
+                      : '#00855b';
 
-              {/* Degraded Link: R3 (660, 260) -> R4 (660, 420) */}
-              <line x1="660" y1="260" x2="660" y2="420" stroke="#ba1a1a" strokeWidth="3" strokeDasharray="5,5" />
-
-              {/* Healthy Link: R4 (660, 420) -> DC Server (660, 570) */}
-              <line x1="660" y1="420" x2="660" y2="570" stroke="#00855b" strokeWidth="3" strokeLinecap="round" />
-
-              {/* Secondary Core Mesh connection */}
-              <line x1="240" y1="260" x2="660" y2="260" stroke="#00855b" strokeWidth="1.5" strokeDasharray="3,3" opacity="0.4" />
+                return (
+                  <line
+                    key={link.id}
+                    x1={source.xPercent}
+                    y1={source.yPercent}
+                    x2={target.xPercent}
+                    y2={target.yPercent}
+                    stroke={stroke}
+                    strokeWidth={link.status === 'critical' ? 0.7 : 0.55}
+                    strokeLinecap="round"
+                    strokeDasharray={
+                      link.status === 'healthy' ? undefined : '2,1.5'
+                    }
+                    vectorEffect="non-scaling-stroke"
+                  />
+                );
+              })}
             </svg>
 
             {/* Interactive Node Markers */}
@@ -584,7 +617,7 @@ export const TopologyPage: React.FC = () => {
               <div className="p-2.5 rounded-xl bg-surface-container-low border border-surface-container-high/40 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between">
                   <span className="font-label-caps text-[10px] text-secondary uppercase font-bold tracking-wider">
-                    Affected Links &amp; Blast Radius
+                    Connected Links &amp; Topology Evidence
                   </span>
                   <span className="px-1.5 py-0.2 rounded bg-outline-variant/30 text-outline font-code-telemetry text-[9px] font-bold">
                     2 Impacted
@@ -593,28 +626,28 @@ export const TopologyPage: React.FC = () => {
                 <div className="flex items-center gap-2 font-body-sm text-[11px]">
                   <div
                     onClick={() => {
-                      const r4 = topology.nodes.find(n => n.id === 'R4');
-                      if (r4) setSelectedNode(r4);
+                      const r2 = topology.nodes.find(n => n.id === 'R2');
+                      if (r2) setSelectedNode(r2);
                     }}
                     className="flex-1 flex items-center gap-1.5 p-1.5 rounded-lg bg-surface-container-lowest border border-surface-container-high/40 cursor-pointer hover:bg-surface-container transition-colors"
                   >
                     <span className="material-symbols-outlined text-outline text-[16px]">lan</span>
                     <div className="flex flex-col min-w-0">
-                      <span className="font-semibold text-on-surface text-[10px] truncate">Node R4</span>
-                      <span className="font-code-telemetry text-[9px] text-outline">Warning Link</span>
+                      <span className="font-semibold text-on-surface text-[10px] truncate">Cogninet R2</span>
+                      <span className="font-code-telemetry text-[9px] text-outline">R1 ↔ R2 link</span>
                     </div>
                   </div>
                   <div
                     onClick={() => {
-                      const srv = topology.nodes.find(n => n.id === 'SRV-01');
+                      const srv = topology.nodes.find(n => n.id === 'R3');
                       if (srv) setSelectedNode(srv);
                     }}
                     className="flex-1 flex items-center gap-1.5 p-1.5 rounded-lg bg-surface-container-lowest border border-surface-container-high/40 cursor-pointer hover:bg-surface-container transition-colors"
                   >
                     <span className="material-symbols-outlined text-outline text-[16px]">storage</span>
                     <div className="flex flex-col min-w-0">
-                      <span className="font-semibold text-on-surface text-[10px] truncate">DC Server</span>
-                      <span className="font-code-telemetry text-[9px] text-outline">Cluster Latency</span>
+                      <span className="font-semibold text-on-surface text-[10px] truncate">Cogninet R3</span>
+                      <span className="font-code-telemetry text-[9px] text-outline">R2 ↔ R3 link</span>
                     </div>
                   </div>
                 </div>

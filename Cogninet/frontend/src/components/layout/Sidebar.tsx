@@ -5,7 +5,7 @@ interface SidebarProps {
   activeAlarmsCount?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeAlarmsCount = 4 }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ activeAlarmsCount = 0 }) => {
   const navItems = [
     {
       label: 'Dashboard',
@@ -16,7 +16,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeAlarmsCount = 4 }) => {
       label: 'Devices',
       path: '/devices',
       icon: 'router',
-      badge: '12',
+      badge: '3',
       badgeType: 'neutral'
     },
     {

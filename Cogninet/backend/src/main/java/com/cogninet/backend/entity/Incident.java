@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 import java.time.OffsetDateTime;
@@ -55,11 +57,39 @@ public class Incident {
     public Incident() {
     }
 
-    public Incident(String incidentId, String title, String severity, String status) {
+    public Incident(
+            String incidentId,
+            String title,
+            String severity,
+            String status
+    ) {
         this.incidentId = incidentId;
         this.title = title;
         this.severity = severity;
         this.status = status;
+    }
+
+    @PrePersist
+    protected void onCreate() {
+
+        OffsetDateTime now = OffsetDateTime.now();
+
+        if (createdAt == null) {
+            createdAt = now;
+        }
+
+        if (updatedAt == null) {
+            updatedAt = now;
+        }
+
+        if (startedAt == null) {
+            startedAt = now;
+        }
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = OffsetDateTime.now();
     }
 
     public Long getId() {
@@ -160,9 +190,17 @@ public class Incident {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+
+        if (this == o) {
+            return true;
+        }
+
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+
         Incident incident = (Incident) o;
+
         return id != null && Objects.equals(id, incident.id);
     }
 
@@ -173,6 +211,7 @@ public class Incident {
 
     @Override
     public String toString() {
+
         return "Incident{" +
                 "id=" + id +
                 ", incidentId='" + incidentId + '\'' +

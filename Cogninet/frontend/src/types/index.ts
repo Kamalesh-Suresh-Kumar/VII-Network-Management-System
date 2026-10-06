@@ -20,9 +20,9 @@ export interface DeviceInterface {
 }
 
 export interface Device {
-  id: string; // e.g. "R1", "R2", "R3", "R4", "SRV-01"
+  id: string; // GNS3 router identifiers, e.g. "R1", "R2", "R3"
   name: string;
-  role: 'Core Router' | 'Edge Router' | 'Distribution Switch' | 'DC Server Cluster' | 'Spine Backbone' | 'Peer Ingress';
+  role: 'Core Router' | 'Edge Router' | 'Distribution Switch';
   ipAddress: string;
   location: string;
   osVersion: string;
@@ -70,7 +70,7 @@ export interface AIIncidentEvidence {
   packetLossSla?: number;
   latency: number; // ms
   latencyNormal?: number;
-  interfaceErrors: number; // CRC/s
+  interfaceErrors: number; // Interface error count when collected
   interfaceErrorsNormal?: number;
   powerDropDbm?: number; // e.g. -21.4
   transitCongestion?: boolean;
@@ -101,7 +101,8 @@ export interface BlastRadiusNode {
 }
 
 export interface AnomalyResult {
-  incidentId: string; // "INC-001"
+  status?: string;
+  incidentId: string; // Backend incident identifier
   title: string;
   severity: 'critical' | 'warning' | 'info';
   severityCode: 'P0' | 'P1' | 'P2';
@@ -127,7 +128,7 @@ export interface AnomalyResult {
 }
 
 export interface TopologyNode {
-  id: string; // "R1", "R2", "R3", "R4", "SRV-01"
+  id: string; // GNS3 topology node identifiers
   name: string;
   label: string;
   type: 'core' | 'edge' | 'dist' | 'server';

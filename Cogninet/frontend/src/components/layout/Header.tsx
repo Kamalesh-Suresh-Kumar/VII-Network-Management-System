@@ -101,7 +101,7 @@ export const Header: React.FC<HeaderProps> = ({
           onClick={() => navigate('/alarms')}
           className="relative p-1.5 rounded-full hover:bg-surface-container transition-colors text-secondary"
           type="button"
-          title="Active network alarms (4)"
+          title="Active network alarms (0)"
         >
           <span className="material-symbols-outlined text-[19px]">notifications</span>
           <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-primary ring-2 ring-surface"></span>

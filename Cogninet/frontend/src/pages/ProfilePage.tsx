@@ -129,9 +129,9 @@ export const ProfilePage: React.FC = () => {
                     <span className="material-symbols-outlined text-[14px]">bolt</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-bold text-xs text-on-surface">Auto-Mitigation Policy Executed</span>
+                    <span className="font-bold text-xs text-on-surface">Backend Incident Correlation Recorded</span>
                     <span className="text-[11px] text-secondary">
-                      Traffic drained from <strong className="font-code-telemetry text-on-surface">Router-Core-R3</strong> to backup trunks R1/R2.
+                      COGINET correlated interface telemetry and alarm evidence for the monitored GNS3/FRRouting topology.
                     </span>
                   </div>
                 </div>
@@ -144,9 +144,9 @@ export const ProfilePage: React.FC = () => {
                     <span className="material-symbols-outlined text-[14px]">search</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="font-bold text-xs text-on-surface">Alarm Inspected (ALM-1092)</span>
+                    <span className="font-bold text-xs text-on-surface">Alarm Record Inspected</span>
                     <span className="text-[11px] text-secondary">
-                      Inspected optical power attenuation loss on port <span className="font-code-telemetry">eth0</span> (-21.4 dBm).
+                      Inspected SNMP interface operational-state telemetry for the affected interface.
                     </span>
                   </div>
                 </div>
@@ -161,7 +161,7 @@ export const ProfilePage: React.FC = () => {
                   <div className="flex flex-col">
                     <span className="font-bold text-xs text-on-surface">AI Root Cause Correlation Confirmed</span>
                     <span className="text-[11px] text-secondary">
-                      Correlated 4 active alarms into Root Incident <strong className="font-code-telemetry text-primary">INC-001</strong> (91% confidence).
+                      Correlated endpoint interface-down alarms into backend incident LINK-DOWN-3-4 with 95% confidence.
                     </span>
                   </div>
                 </div>

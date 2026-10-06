@@ -298,7 +298,7 @@ export const DeviceDetailPage: React.FC = () => {
                   <span>Active Carrier Drop Fault</span>
                 </div>
                 <p className="font-body-sm text-[11px] text-on-surface-variant mt-1 leading-relaxed">
-                  Optical transceiver power drop (-21.4 dBm) on port eth0. Deterministic causal inference detected 94% anomaly score.
+                  No additional interface fault metric is collected by the current SNMP collector. Review the backend telemetry and alarm history for this device.
                 </p>
               </div>
             )}

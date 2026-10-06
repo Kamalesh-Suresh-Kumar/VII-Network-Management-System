@@ -68,4 +68,6 @@ Exp 10/
 # Java / Maven
 target/
 **/target/
-.mvn/wrapper/maven-wrapper.jar
+.mvn/wrapper/maven-wrapper.jar
+# NETCONF external repositories and build artifacts
+Cogninet/telemetry/netconf/build/

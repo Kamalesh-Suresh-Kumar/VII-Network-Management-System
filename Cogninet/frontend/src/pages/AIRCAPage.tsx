@@ -13,7 +13,7 @@ export const AIRCAPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   const [mitigationState, setMitigationState] = useState<'idle' | 'in_progress' | 'applied'>('idle');
-  const [mitigationText, setMitigationText] = useState<string>('Apply AI Mitigation (Auto-Evacuate R3)');
+  const [mitigationText, setMitigationText] = useState<string>('Review Correlated Incident');
   const [isAcknowledged, setIsAcknowledged] = useState<boolean>(false);
 
   const navigate = useNavigate();
@@ -22,7 +22,7 @@ export const AIRCAPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      const targetId = incidentId || 'INC-001';
+      const targetId = incidentId || 'LINK-DOWN-3-4';
       let data = await getIncidentById(targetId);
       if (!data) {
         const all = await getIncidents();
@@ -32,7 +32,7 @@ export const AIRCAPage: React.FC = () => {
         setIncident(data);
         if (data.mitigationStatus === 'applied') {
           setMitigationState('applied');
-          setMitigationText('Mitigation Applied: R3 Evacuated');
+          setMitigationText('Incident Resolution Recorded');
         }
       } else {
         setError('No active AI/RCA incident records found.');
@@ -51,12 +51,12 @@ export const AIRCAPage: React.FC = () => {
   const handleMitigateClick = async () => {
     if (!incident || mitigationState !== 'idle') return;
     setMitigationState('in_progress');
-    setMitigationText('Evacuating R3 → Shifting to R1/R2...');
+    setMitigationText('Processing Cogninet incident action...');
 
     const res = await mitigateIncident(incident.incidentId);
     setTimeout(() => {
       setMitigationState('applied');
-      setMitigationText('Mitigation Applied: R3 Evacuated');
+      setMitigationText('Incident Action Completed');
     }, 1200);
   };
 
@@ -119,13 +119,13 @@ export const AIRCAPage: React.FC = () => {
               AI Anomalies
             </span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="font-title-kpi text-[24px] font-bold text-on-surface leading-none">3</span>
+              <span className="font-title-kpi text-[24px] font-bold text-on-surface leading-none">1</span>
               <span className="text-tertiary font-code-telemetry text-[11px] flex items-center font-bold">
                 <span className="material-symbols-outlined text-[13px]">trending_flat</span> Steady
               </span>
             </div>
             <span className="font-body-sm text-[11px] text-secondary mt-0.5 truncate">
-              3 clusters currently mapped
+              Correlated incident under analysis
             </span>
           </div>
           <div className="w-9 h-9 rounded-xl bg-surface-container-low flex items-center justify-center text-primary shrink-0">
@@ -140,13 +140,15 @@ export const AIRCAPage: React.FC = () => {
               Critical Incidents
             </span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="font-title-kpi text-[24px] font-bold text-error leading-none">1</span>
+              <span className="font-title-kpi text-[24px] font-bold text-error leading-none">${
+                String(incident.severity).toLowerCase() === 'critical' ? 1 : 0
+              }</span>
               <span className="font-code-telemetry text-[11px] text-error font-bold px-1.5 py-0.2 bg-error-container/60 rounded">
-                P0 Active
+                P0 Resolved
               </span>
             </div>
             <span className="font-body-sm text-[11px] text-secondary mt-0.5 truncate">
-              INC-001 High SLA impact
+              {incident.incidentId} • {incident.mitigationStatus.toUpperCase()}
             </span>
           </div>
           <div className="w-9 h-9 rounded-xl bg-error-container/40 flex items-center justify-center text-error shrink-0">
@@ -162,8 +164,8 @@ export const AIRCAPage: React.FC = () => {
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="font-title-kpi text-[24px] font-bold text-on-surface leading-none">{incident.confidence}%</span>
-              <span className="text-tertiary font-code-telemetry text-[11px] flex items-center font-bold">
-                <span className="material-symbols-outlined text-[13px]">arrow_upward</span> +4.2%
+              <span className="text-tertiary font-code-telemetry text-[11px] font-bold">
+                Evidence based
               </span>
             </div>
             <span className="font-body-sm text-[11px] text-secondary mt-0.5 truncate">
@@ -182,11 +184,13 @@ export const AIRCAPage: React.FC = () => {
               Resolved Today
             </span>
             <div className="flex items-baseline gap-2 mt-1">
-              <span className="font-title-kpi text-[24px] font-bold text-on-surface leading-none">7</span>
-              <span className="font-code-telemetry text-[11px] text-tertiary font-bold">100% Auto</span>
+              <span className="font-title-kpi text-[24px] font-bold text-on-surface leading-none">
+                {incident.mitigationStatus === 'applied' ? 1 : 0}
+              </span>
+              <span className="font-code-telemetry text-[11px] text-tertiary font-bold">Backend State</span>
             </div>
             <span className="font-body-sm text-[11px] text-secondary mt-0.5 truncate">
-              Autonomous self-healed
+              Backend incident resolution state
             </span>
           </div>
           <div className="w-9 h-9 rounded-xl bg-surface-container flex items-center justify-center text-tertiary shrink-0">
@@ -206,7 +210,7 @@ export const AIRCAPage: React.FC = () => {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="px-2 py-0.5 rounded-full bg-error-container text-on-error-container font-label-caps text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-error animate-ping"></span>
-                    Critical
+                    {incident.severity.toUpperCase()}
                   </span>
                   <span className="font-code-telemetry text-[12px] font-bold text-on-surface bg-surface-container px-2 py-0.5 rounded">
                     Incident {incident.incidentId}
@@ -219,7 +223,7 @@ export const AIRCAPage: React.FC = () => {
                   {incident.title}
                 </h2>
                 <span className="font-body-sm text-[12px] text-secondary truncate">
-                  Core transit link degraded on backbone trunk ring #3
+                  {incident.rootCauseDetails}
                 </span>
               </div>
             </div>
@@ -251,7 +255,7 @@ export const AIRCAPage: React.FC = () => {
                 <span className="font-label-caps text-[9px] uppercase tracking-wider text-secondary font-bold">
                   Anomaly Score
                 </span>
-                <span className="font-body-md text-[12px] font-bold text-error">Extreme Surge</span>
+                <span className="font-body-md text-[12px] font-bold text-error">Correlated Fault</span>
                 <span className="font-code-telemetry text-[10px] text-secondary">{incident.engineVersion}</span>
               </div>
             </div>
@@ -271,7 +275,7 @@ export const AIRCAPage: React.FC = () => {
                     </span>
                     <span className="text-secondary">•</span>
                     <span className="font-code-telemetry text-[11px] text-secondary">
-                      Deterministic Causal Inferred
+                      Explainable Correlation
                     </span>
                   </div>
                   <h3 className="font-headline-md text-[16px] font-bold text-on-surface mt-0.5 truncate">
@@ -302,7 +306,7 @@ export const AIRCAPage: React.FC = () => {
                 Causal Telemetry-to-Impact Pipeline
               </span>
               <span className="font-code-telemetry text-[10px] text-primary font-semibold">
-                5-Stage Continuous Flow
+                Telemetry-to-RCA Flow
               </span>
             </div>
 
@@ -370,78 +374,69 @@ export const AIRCAPage: React.FC = () => {
               </span>
               <span className="font-code-telemetry text-[10px] text-tertiary flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
-                Live Diagnostic Stream
+                Backend Diagnostic Evidence
               </span>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 min-w-0">
-              {/* CPU */}
+              {/* Current interface state */}
               <div className="bg-surface-container-low rounded-xl p-2.5 border border-surface-container-high/40 min-w-0">
                 <div className="flex items-center justify-between text-secondary mb-1">
-                  <span className="font-body-sm text-[11px] truncate">CPU Utilization</span>
-                  <span className="font-code-telemetry text-[11px] text-error font-bold">
-                    {incident.evidence.cpu}%
-                  </span>
+                  <span className="font-body-sm text-[11px] truncate">SNMP Interface State</span>
+                  <span className="font-code-telemetry text-[11px] text-tertiary font-bold">UP</span>
                 </div>
                 <div className="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-primary h-1.5 rounded-full" style={{ width: `${incident.evidence.cpu}%` }}></div>
+                  <div className="bg-tertiary h-1.5 rounded-full" style={{ width: '100%' }}></div>
                 </div>
-                <div className="flex justify-between text-[10px] font-code-telemetry text-secondary mt-1.5">
-                  <span>Base: {incident.evidence.cpuBaseline || 38}%</span>
-                  <span className="text-error font-bold">+54% Over</span>
+                <div className="text-[10px] font-code-telemetry text-secondary mt-1.5">
+                  Current interface state
                 </div>
               </div>
 
-              {/* Packet Loss */}
+              {/* Historical evidence */}
               <div className="bg-surface-container-low rounded-xl p-2.5 border border-surface-container-high/40 min-w-0">
                 <div className="flex items-center justify-between text-secondary mb-1">
-                  <span className="font-body-sm text-[11px] truncate">Packet Loss</span>
-                  <span className="font-code-telemetry text-[11px] text-error font-bold">
-                    {incident.evidence.packetLoss}%
-                  </span>
+                  <span className="font-body-sm text-[11px] truncate">Historical DOWN Samples</span>
+                  <span className="font-code-telemetry text-[11px] text-error font-bold">Detected</span>
                 </div>
                 <div className="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-primary h-1.5 rounded-full" style={{ width: '70%' }}></div>
+                  <div className="bg-error h-1.5 rounded-full" style={{ width: '70%' }}></div>
                 </div>
-                <div className="flex justify-between text-[10px] font-code-telemetry text-secondary mt-1.5">
-                  <span>SLA: {incident.evidence.packetLossSla || 0.05}%</span>
-                  <span className="text-error font-bold">Critical</span>
+                <div className="text-[10px] font-code-telemetry text-secondary mt-1.5">
+                  Telemetry history
                 </div>
               </div>
 
-              {/* Latency */}
+              {/* Correlated interfaces */}
               <div className="bg-surface-container-low rounded-xl p-2.5 border border-surface-container-high/40 min-w-0">
                 <div className="flex items-center justify-between text-secondary mb-1">
-                  <span className="font-body-sm text-[11px] truncate">Transit Latency</span>
-                  <span className="font-code-telemetry text-[11px] text-error font-bold">
-                    {incident.evidence.latency} ms
-                  </span>
+                  <span className="font-body-sm text-[11px] truncate">Correlated Interfaces</span>
+                  <span className="font-code-telemetry text-[11px] text-error font-bold">2</span>
                 </div>
                 <div className="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-primary h-1.5 rounded-full" style={{ width: '85%' }}></div>
+                  <div className="bg-primary h-1.5 rounded-full" style={{ width: '50%' }}></div>
                 </div>
-                <div className="flex justify-between text-[10px] font-code-telemetry text-secondary mt-1.5">
-                  <span>Norm: {incident.evidence.latencyNormal || 18}ms</span>
-                  <span className="text-error font-bold">10x Drift</span>
+                <div className="text-[10px] font-code-telemetry text-secondary mt-1.5 truncate">
+                  R1 eth0 / R2 eth0
                 </div>
               </div>
 
-              {/* Interface Errors */}
+              {/* Telemetry source */}
               <div className="bg-surface-container-low rounded-xl p-2.5 border border-surface-container-high/40 min-w-0">
                 <div className="flex items-center justify-between text-secondary mb-1">
-                  <span className="font-body-sm text-[11px] truncate">Interface Errors</span>
-                  <span className="font-code-telemetry text-[11px] text-primary font-bold">
-                    {incident.evidence.interfaceErrors} CRC/s
-                  </span>
+                  <span className="font-body-sm text-[11px] truncate">Telemetry Source</span>
+                  <span className="font-code-telemetry text-[11px] text-tertiary font-bold">SNMP</span>
                 </div>
                 <div className="w-full bg-surface-container-highest rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-outline h-1.5 rounded-full" style={{ width: '60%' }}></div>
+                  <div className="bg-tertiary h-1.5 rounded-full" style={{ width: '100%' }}></div>
                 </div>
-                <div className="flex justify-between text-[10px] font-code-telemetry text-secondary mt-1.5">
-                  <span>Norm: 0/s</span>
-                  <span className="text-on-surface font-semibold truncate">Framing Drop</span>
+                <div className="text-[10px] font-code-telemetry text-secondary mt-1.5 truncate">
+                  interface_oper_status
                 </div>
               </div>
+            </div>
+            <div className="mt-2 text-[10px] font-code-telemetry text-secondary">
+              Packet loss: Not collected · Latency: Not collected · Interface errors: Not collected
             </div>
           </div>
 
@@ -488,7 +483,7 @@ export const AIRCAPage: React.FC = () => {
 
             <div className="flex items-center gap-1.5 text-secondary font-code-telemetry text-[11px] shrink-0">
               <span className="w-2 h-2 rounded-full bg-tertiary"></span>
-              <span>SecOps Level-2 Signoff Ready</span>
+              <span>RCA Evidence Ready</span>
             </div>
           </div>
         </div>
